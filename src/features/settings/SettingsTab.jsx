@@ -3,6 +3,7 @@ import EditBulgariaOutlets from './EditBulgariaOutlets.jsx';
 import EditWorldPrefs from './EditWorldPrefs.jsx';
 import EditSportsPrefs from './EditSportsPrefs.jsx';
 import NotificationsSection from './NotificationsSection.jsx';
+import InstallHint from './InstallHint.jsx';
 
 export default function SettingsTab({ onRestartOnboarding }) {
   return (
@@ -39,6 +40,7 @@ export default function SettingsTab({ onRestartOnboarding }) {
 
       <section>
         <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>Notifications</h2>
+        <InstallHint />
         <NotificationsSection />
       </section>
 
