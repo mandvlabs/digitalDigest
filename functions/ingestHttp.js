@@ -4,7 +4,7 @@ const { runBulgariaIngest } = require('./ingestBulgaria');
 const { runWorldIngest } = require('./ingestWorld');
 const { runSportsIngest } = require('./ingestSports');
 
-const ingestNewsHttp = onRequest(async (req, res) => {
+const ingestNewsHttp = onRequest({ timeoutSeconds: 540 }, async (req, res) => {
   const ingestKey = process.env.INGEST_KEY;
   if (ingestKey && req.query.key !== ingestKey) {
     res.status(401).send('Unauthorized');
