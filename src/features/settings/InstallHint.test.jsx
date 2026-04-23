@@ -21,14 +21,14 @@ describe('InstallHint', () => {
     isStandalone.mockReturnValue(false);
     isIos.mockReturnValue(true);
     render(<InstallHint />);
-    expect(screen.getByText(/home screen/i)).toBeInTheDocument();
-    expect(screen.getByText(/share/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/home screen/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/share button/i)).toBeInTheDocument();
   });
 
   it('renders generic hint on non-iOS browsers', () => {
     isStandalone.mockReturnValue(false);
     isIos.mockReturnValue(false);
     render(<InstallHint />);
-    expect(screen.getByText(/install/i)).toBeInTheDocument();
+    expect(screen.getByText(/Install Daily Family Digest/i)).toBeInTheDocument();
   });
 });

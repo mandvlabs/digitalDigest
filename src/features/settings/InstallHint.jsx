@@ -16,9 +16,9 @@ export default function InstallHint() {
     >
       {ios ? (
         <>
-          <strong>Add to home screen</strong>
+          <strong>Install to Home Screen</strong>
           <div style={{ marginTop: 4 }}>
-            Tap the share button, then <em>Add to Homescreen</em>.
+            Tap the Share button, then <em>Add to Home Screen</em>.
             Push notifications on iOS only work from the installed app.
           </div>
         </>
@@ -26,7 +26,7 @@ export default function InstallHint() {
         <>
           <strong>Install Daily Family Digest</strong>
           <div style={{ marginTop: 4 }}>
-            Use your browser's option for the best experience.
+            Use your browser's install option for the best experience.
           </div>
         </>
       )}
