@@ -16,5 +16,8 @@
   "devDependencies": {
     "vitest": "^4",
     "eslint": "^9"
+  },
+  "vitest": {
+    "environment": "node"
   }
 }
