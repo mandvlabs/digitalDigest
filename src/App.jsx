@@ -1,3 +1,55 @@
+import { useState } from 'react';
+import { useAuth } from './hooks/useAuth.js';
+import { usePrefs } from './hooks/usePrefs.js';
+import { signInWithGoogle } from './services/auth.js';
+import Spinner from './components/Spinner.jsx';
+import AppLayout from './components/AppLayout.jsx';
+import OnboardingWizard from './features/onboarding/OnboardingWizard.jsx';
+import HomeTab from './features/home/HomeTab.jsx';
+import BulgariaTab from './features/bulgaria/BulgariaTab.jsx';
+import WorldTab from './features/world/WorldTab.jsx';
+import SportsTab from './features/sports/SportsTab.jsx';
+import SettingsTab from './features/settings/SettingsTab.jsx';
+
 export default function App() {
-  return <div>Daily Family Digest — loading…</div>;
+  const { user, loading: authLoading } = useAuth();
+  const { prefs, loading: prefsLoading } = usePrefs();
+  const [activeTab, setActiveTab] = useState('home');
+  const [rerunOnboarding, setRerunOnboarding] = useState(false);
+
+  if (authLoading) return <Spinner label="Starting…" />;
+
+  if (!user) {
+    return (
+      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 360, margin: '64px auto' }}>
+        <h1 style={{ margin: 0 }}>Daily Family Digest</h1>
+        <p style={{ color: '#666' }}>
+          Sign in with Google to set up your news feed.
+        </p>
+        <button onClick={signInWithGoogle}>Continue with Google</button>
+      </div>
+    );
+  }
+
+  if (prefsLoading) return <Spinner label="Loading your preferences…" />;
+
+  if (!prefs?.onboardingComplete || rerunOnboarding) {
+    return (
+      <OnboardingWizard
+        onFinish={() => setRerunOnboarding(false)}
+      />
+    );
+  }
+
+  return (
+    <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {activeTab === 'home' && <HomeTab />}
+      {activeTab === 'bulgaria' && <BulgariaTab />}
+      {activeTab === 'world' && <WorldTab />}
+      {activeTab === 'sports' && <SportsTab />}
+      {activeTab === 'settings' && (
+        <SettingsTab onRestartOnboarding={() => setRerunOnboarding(true)} />
+      )}
+    </AppLayout>
+  );
 }
