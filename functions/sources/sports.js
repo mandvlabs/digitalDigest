@@ -21,7 +21,7 @@ const FOOTBALL_TEAMS = [
 ];
 
 function buildTeamUrl(teamName) {
-  const q = encodeURIComponent(`"${teamName}" football`);
+  const q = encodeURIComponent(`"${teamName}" football when:1d`);
   return `https://news.google.com/rss/search?q=${q}&hl=en&gl=US&ceid=US:en`;
 }
 
