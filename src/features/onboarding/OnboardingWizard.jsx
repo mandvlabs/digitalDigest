@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePrefs } from '../../hooks/usePrefs.js';
+import { useAuth } from '../../hooks/useAuth.js';
 import WelcomeStep from './WelcomeStep.jsx';
 import BulgariaStep from './BulgariaStep.jsx';
 import WorldStep from './WorldStep.jsx';
@@ -10,6 +11,7 @@ const STEPS = ['welcome', 'bulgaria', 'world', 'sports', 'notifications'];
 
 export default function OnboardingWizard({ onFinish }) {
   const { prefs, update } = usePrefs();
+  const { user } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState({
     bulgariaOutlets: prefs?.bulgariaOutlets ?? [],
@@ -80,6 +82,7 @@ export default function OnboardingWizard({ onFinish }) {
       )}
       {step === 'notifications' && (
         <NotificationsStep
+          uid={user?.uid}
           notifications={draft.notifications}
           onChange={(notifications) => patchDraft({ notifications })}
           onBack={back}

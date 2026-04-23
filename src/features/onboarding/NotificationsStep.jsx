@@ -1,17 +1,37 @@
 import { useState } from 'react';
+import { subscribeToken } from '../../services/messaging.js';
 
-export default function NotificationsStep({ notifications, onChange, onBack, onFinish }) {
+export default function NotificationsStep({
+  uid,
+  notifications,
+  onChange,
+  onBack,
+  onFinish,
+}) {
   const [permission, setPermission] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied',
   );
+  const [subscribing, setSubscribing] = useState(false);
+  const [error, setError] = useState(null);
 
   async function requestPermission() {
+    setError(null);
     if (typeof Notification === 'undefined') {
       setPermission('denied');
       return;
     }
     const result = await Notification.requestPermission();
     setPermission(result);
+    if (result === 'granted' && uid) {
+      setSubscribing(true);
+      try {
+        await subscribeToken(uid);
+      } catch (err) {
+        setError(err.message || 'Could not subscribe to notifications');
+      } finally {
+        setSubscribing(false);
+      }
+    }
   }
 
   function toggle(key) {
@@ -29,8 +49,11 @@ export default function NotificationsStep({ notifications, onChange, onBack, onF
           Status: <strong>{permission}</strong>
         </div>
         {permission !== 'granted' && (
-          <button onClick={requestPermission}>Enable notifications</button>
+          <button onClick={requestPermission} disabled={subscribing}>
+            {subscribing ? 'Subscribing…' : 'Enable notifications'}
+          </button>
         )}
+        {error && <div style={{ color: '#b00', fontSize: 13 }}>{error}</div>}
       </section>
 
       <section>

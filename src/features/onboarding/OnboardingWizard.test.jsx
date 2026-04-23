@@ -5,6 +5,15 @@ vi.mock('../../hooks/usePrefs.js', () => ({
   usePrefs: vi.fn(),
 }));
 
+vi.mock('../../hooks/useAuth.js', () => ({
+  useAuth: vi.fn(() => ({ user: { uid: 'test-uid' }, loading: false })),
+}));
+
+vi.mock('../../services/messaging.js', () => ({
+  subscribeToken: vi.fn().mockResolvedValue(null),
+  onForegroundMessage: vi.fn().mockResolvedValue(() => {}),
+}));
+
 const updateMock = vi.fn();
 
 beforeEach(() => {
