@@ -26,9 +26,9 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-function mockSnapshot(items) {
+function mockSnapshot(items, prefix = 'id') {
   const docs = items.map((data, i) => ({
-    id: `id-${i}`,
+    id: `${prefix}-${i}`,
     data: () => data,
   }));
   return { docs, empty: docs.length === 0 };
@@ -71,10 +71,10 @@ describe('news service', () => {
       mockGetDocs
         .mockResolvedValueOnce(mockSnapshot([
           { section: 'bulgaria', headline: 'A', publishedAt: { toDate: () => new Date('2026-04-23T12:00Z') } },
-        ]))
+        ], 'c1'))
         .mockResolvedValueOnce(mockSnapshot([
           { section: 'bulgaria', headline: 'B', publishedAt: { toDate: () => new Date('2026-04-23T13:00Z') } },
-        ]));
+        ], 'c2'));
       const { fetchBulgariaNews } = await import('./news.js');
       const result = await fetchBulgariaNews({ outlets, limit: 30 });
       expect(mockGetDocs).toHaveBeenCalledTimes(2);

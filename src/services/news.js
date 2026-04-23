@@ -60,8 +60,13 @@ async function runChunkedTagQuery({ section, tags, pageSize, cursor }) {
   const pages = await Promise.all(
     chunks.map((c) => runTagQuery({ section, tags: c, pageSize, cursor: null })),
   );
-  const all = pages.flatMap((p) => p.articles);
-  const merged = all.sort(
+  const seen = new Map();
+  for (const p of pages) {
+    for (const a of p.articles) {
+      if (!seen.has(a.id)) seen.set(a.id, a);
+    }
+  }
+  const merged = [...seen.values()].sort(
     (a, b) => publishedMillis(b) - publishedMillis(a),
   );
   return {
