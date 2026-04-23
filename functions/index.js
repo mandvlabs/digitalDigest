@@ -7,6 +7,7 @@ const { ingestWorldNews } = require('./ingestWorld');
 const { ingestSportsNews } = require('./ingestSports');
 const { cleanupOldNews } = require('./cleanup');
 const { ingestNewsHttp } = require('./ingestHttp');
+const { onNewsArticle } = require('./onNewsArticle');
 
 module.exports = {
   ingestBulgariaNews,
@@ -14,4 +15,5 @@ module.exports = {
   ingestSportsNews,
   cleanupOldNews,
   ingestNewsHttp,
+  onNewsArticle,
 };
