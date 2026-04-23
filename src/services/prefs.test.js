@@ -8,6 +8,8 @@ const mockSetDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockServerTimestamp = vi.fn(() => '__server_ts__');
+const mockArrayUnion = vi.fn((v) => ({ __arrayUnion: v }));
+const mockArrayRemove = vi.fn((v) => ({ __arrayRemove: v }));
 
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn(() => mockDocRef),
@@ -16,6 +18,8 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: (...args) => mockUpdateDoc(...args),
   onSnapshot: (...args) => mockOnSnapshot(...args),
   serverTimestamp: () => mockServerTimestamp(),
+  arrayUnion: (...args) => mockArrayUnion(...args),
+  arrayRemove: (...args) => mockArrayRemove(...args),
 }));
 
 beforeEach(() => {
@@ -75,5 +79,23 @@ describe('prefs service', () => {
 
     expect(mockOnSnapshot).toHaveBeenCalledOnce();
     expect(returned).toBe(unsub);
+  });
+});
+
+describe('addFcmToken / removeFcmToken', () => {
+  it('addFcmToken calls updateDoc with arrayUnion', async () => {
+    const { addFcmToken } = await import('./prefs.js');
+    await addFcmToken('user-1', 'tok-abc');
+    expect(mockUpdateDoc).toHaveBeenCalledOnce();
+    const patch = mockUpdateDoc.mock.calls[0][1];
+    expect(patch.fcmTokens).toBeDefined();
+    expect(mockArrayUnion).toHaveBeenCalledWith('tok-abc');
+  });
+
+  it('removeFcmToken calls updateDoc with arrayRemove', async () => {
+    const { removeFcmToken } = await import('./prefs.js');
+    await removeFcmToken('user-1', 'tok-abc');
+    expect(mockUpdateDoc).toHaveBeenCalledOnce();
+    expect(mockArrayRemove).toHaveBeenCalledWith('tok-abc');
   });
 });

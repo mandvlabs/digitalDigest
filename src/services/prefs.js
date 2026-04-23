@@ -5,6 +5,8 @@ import {
   updateDoc,
   onSnapshot,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db } from './firebase.js';
 
@@ -49,5 +51,19 @@ export async function updatePrefs(uid, patch) {
 export function subscribePrefs(uid, callback) {
   return onSnapshot(prefsRef(uid), (snap) => {
     callback(snap.exists() ? snap.data() : null);
+  });
+}
+
+export async function addFcmToken(uid, token) {
+  await updateDoc(prefsRef(uid), {
+    fcmTokens: arrayUnion(token),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function removeFcmToken(uid, token) {
+  await updateDoc(prefsRef(uid), {
+    fcmTokens: arrayRemove(token),
+    updatedAt: serverTimestamp(),
   });
 }
