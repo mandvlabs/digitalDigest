@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from './hooks/useAuth.js';
 import { usePrefs } from './hooks/usePrefs.js';
+import { useMessaging } from './hooks/useMessaging.js';
 import { signInWithGoogle } from './services/auth.js';
 import Spinner from './components/Spinner.jsx';
 import AppLayout from './components/AppLayout.jsx';
+import PushToast from './components/PushToast.jsx';
 import OnboardingWizard from './features/onboarding/OnboardingWizard.jsx';
 import HomeTab from './features/home/HomeTab.jsx';
 import BulgariaTab from './features/bulgaria/BulgariaTab.jsx';
@@ -11,11 +13,40 @@ import WorldTab from './features/world/WorldTab.jsx';
 import SportsTab from './features/sports/SportsTab.jsx';
 import SettingsTab from './features/settings/SettingsTab.jsx';
 
-export default function App() {
-  const { user, loading: authLoading } = useAuth();
+function AuthenticatedApp() {
   const { prefs, loading: prefsLoading } = usePrefs();
+  const { toast, dismiss } = useMessaging();
   const [activeTab, setActiveTab] = useState('home');
   const [rerunOnboarding, setRerunOnboarding] = useState(false);
+
+  if (prefsLoading) return <Spinner label="Loading your preferences…" />;
+
+  if (!prefs?.onboardingComplete || rerunOnboarding) {
+    return (
+      <OnboardingWizard
+        onFinish={() => setRerunOnboarding(false)}
+      />
+    );
+  }
+
+  return (
+    <>
+      <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
+        {activeTab === 'home' && <HomeTab onNavigate={setActiveTab} />}
+        {activeTab === 'bulgaria' && <BulgariaTab />}
+        {activeTab === 'world' && <WorldTab />}
+        {activeTab === 'sports' && <SportsTab />}
+        {activeTab === 'settings' && (
+          <SettingsTab onRestartOnboarding={() => setRerunOnboarding(true)} />
+        )}
+      </AppLayout>
+      <PushToast toast={toast} onDismiss={dismiss} />
+    </>
+  );
+}
+
+export default function App() {
+  const { user, loading: authLoading } = useAuth();
 
   if (authLoading) return <Spinner label="Starting…" />;
 
@@ -31,25 +62,5 @@ export default function App() {
     );
   }
 
-  if (prefsLoading) return <Spinner label="Loading your preferences…" />;
-
-  if (!prefs?.onboardingComplete || rerunOnboarding) {
-    return (
-      <OnboardingWizard
-        onFinish={() => setRerunOnboarding(false)}
-      />
-    );
-  }
-
-  return (
-    <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      {activeTab === 'home' && <HomeTab onNavigate={setActiveTab} />}
-      {activeTab === 'bulgaria' && <BulgariaTab />}
-      {activeTab === 'world' && <WorldTab />}
-      {activeTab === 'sports' && <SportsTab />}
-      {activeTab === 'settings' && (
-        <SettingsTab onRestartOnboarding={() => setRerunOnboarding(true)} />
-      )}
-    </AppLayout>
-  );
+  return <AuthenticatedApp />;
 }
