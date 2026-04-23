@@ -43,7 +43,7 @@ export default function App() {
 
   return (
     <AppLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      {activeTab === 'home' && <HomeTab />}
+      {activeTab === 'home' && <HomeTab onNavigate={setActiveTab} />}
       {activeTab === 'bulgaria' && <BulgariaTab />}
       {activeTab === 'world' && <WorldTab />}
       {activeTab === 'sports' && <SportsTab />}
