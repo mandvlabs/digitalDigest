@@ -55,7 +55,7 @@ export default function NotificationsSection() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 13, color: '#666' }}>
+      <div style={{ fontSize: 15, color: '#666' }}>
         Permission: <strong>{permission}</strong>
       </div>
       {permission !== 'granted' && (
@@ -80,7 +80,7 @@ export default function NotificationsSection() {
           {busy ? 'Refreshing…' : 'Refresh push token'}
         </button>
       )}
-      {error && <div style={{ color: '#b00', fontSize: 13 }}>{error}</div>}
+      {error && <div style={{ color: '#b00', fontSize: 15 }}>{error}</div>}
       {TOGGLES.map((t) => (
         <label key={t.key} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input

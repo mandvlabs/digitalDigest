@@ -18,7 +18,7 @@ export default function SportsStep({
       <p style={{ color: '#666' }}>Optional — skip if you don't follow sports.</p>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 4px' }}>Football teams</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Football teams</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {LEAGUES.map((l) => (
             <details key={l.id} open>
@@ -41,7 +41,7 @@ export default function SportsStep({
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 4px' }}>Formula 1</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Formula 1</h2>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             type="checkbox"

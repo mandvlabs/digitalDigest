@@ -19,7 +19,7 @@ export default function WorldStep({
       <h1 style={{ margin: 0 }}>World news</h1>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 4px' }}>Topics</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Topics</h2>
         <p style={{ color: '#666', margin: '0 0 8px' }}>Pick at least one.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {WORLD_TOPICS.map((t) => (
@@ -36,7 +36,7 @@ export default function WorldStep({
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 4px' }}>Regions</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Regions</h2>
         <p style={{ color: '#666', margin: '0 0 8px' }}>Pick at least one.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {WORLD_REGIONS.map((r) => (

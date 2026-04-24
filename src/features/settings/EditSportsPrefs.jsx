@@ -28,7 +28,7 @@ export default function EditSportsPrefs() {
         </label>
         {LEAGUES.map((league) => (
           <div key={league.id} style={{ marginBottom: 10 }}>
-            <h4 style={{ margin: '0 0 6px', fontSize: 13 }}>{league.name}</h4>
+            <h4 style={{ margin: '0 0 6px', fontSize: 15 }}>{league.name}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {TEAMS.filter((t) => t.leagueId === league.id).map((t) => (
                 <label key={t.id} style={{ display: 'flex', gap: 8 }}>

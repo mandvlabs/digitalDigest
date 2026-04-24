@@ -44,7 +44,7 @@ export default function NotificationsStep({
       <p style={{ color: '#666' }}>Optional — you can change these later in Settings.</p>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>Browser permission</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>Browser permission</h2>
         <div style={{ color: '#333', marginBottom: 8 }}>
           Status: <strong>{permission}</strong>
         </div>
@@ -53,11 +53,11 @@ export default function NotificationsStep({
             {subscribing ? 'Subscribing…' : 'Enable notifications'}
           </button>
         )}
-        {error && <div style={{ color: '#b00', fontSize: 13 }}>{error}</div>}
+        {error && <div style={{ color: '#b00', fontSize: 15 }}>{error}</div>}
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>What to alert me about</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>What to alert me about</h2>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             type="checkbox"

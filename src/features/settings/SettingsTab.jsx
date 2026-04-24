@@ -18,15 +18,15 @@ export default function SettingsTab({ onRestartOnboarding }) {
         minHeight: 0,
       }}
     >
-      <h1 style={{ margin: 0, fontSize: 20 }}>Settings</h1>
+      <h1 style={{ margin: 0, fontSize: 22 }}>Settings</h1>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>Profile</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>Profile</h2>
         <ProfileSection />
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>Preferences</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>Preferences</h2>
         <EditBulgariaOutlets />
         <EditWorldPrefs />
         <EditSportsPrefs />
@@ -39,13 +39,13 @@ export default function SettingsTab({ onRestartOnboarding }) {
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>Notifications</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>Notifications</h2>
         <InstallHint />
         <NotificationsSection />
       </section>
 
       <section>
-        <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>About</h2>
+        <h2 style={{ fontSize: 18, margin: '0 0 8px' }}>About</h2>
         <div style={{ color: '#666' }}>Daily Family Digest — v1</div>
       </section>
     </section>

@@ -47,7 +47,7 @@ export default function OnboardingWizard({ onFinish }) {
 
   return (
     <div style={{ padding: 24, maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ color: '#888', fontSize: 12 }}>
+      <div style={{ color: '#888', fontSize: 14 }}>
         Step {stepIndex + 1} of {STEPS.length}
       </div>
 

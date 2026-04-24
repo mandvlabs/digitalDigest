@@ -18,7 +18,7 @@ const IMG_STYLE = {
 };
 
 const META_STYLE = {
-  fontSize: 12,
+  fontSize: 14,
   color: '#666',
   display: 'flex',
   gap: 6,
@@ -27,14 +27,14 @@ const META_STYLE = {
 
 const HEADLINE_STYLE = {
   margin: 0,
-  fontSize: 15,
+  fontSize: 17,
   lineHeight: 1.3,
   fontWeight: 600,
 };
 
 const EXCERPT_STYLE = {
   margin: '4px 0 0',
-  fontSize: 13,
+  fontSize: 15,
   color: '#444',
   lineHeight: 1.4,
   overflow: 'hidden',

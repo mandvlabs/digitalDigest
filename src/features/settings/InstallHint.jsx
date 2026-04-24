@@ -10,7 +10,7 @@ export default function InstallHint() {
         background: '#fafafa',
         padding: 12,
         borderRadius: 8,
-        fontSize: 14,
+        fontSize: 16,
         color: '#333',
       }}
     >

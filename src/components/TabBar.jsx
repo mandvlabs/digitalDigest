@@ -28,7 +28,7 @@ export default function TabBar({ active, onChange }) {
             background: 'none',
             border: 'none',
             color: active === key ? '#111' : '#888',
-            fontSize: 12,
+            fontSize: 14,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

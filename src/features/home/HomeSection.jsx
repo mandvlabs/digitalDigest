@@ -16,14 +16,14 @@ export default function HomeSection({ title, section, onSeeAll }) {
           padding: '16px 16px 8px',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 16 }}>{title}</h2>
+        <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
         <button
           onClick={onSeeAll}
           style={{
             background: 'none',
             border: 'none',
             color: '#0366d6',
-            fontSize: 13,
+            fontSize: 15,
             cursor: 'pointer',
             padding: 4,
           }}
@@ -33,12 +33,12 @@ export default function HomeSection({ title, section, onSeeAll }) {
       </header>
       {loading && top.length === 0 && <Spinner label="Loading…" />}
       {error && top.length === 0 && (
-        <div style={{ padding: 16, color: '#b00', fontSize: 13 }}>
+        <div style={{ padding: 16, color: '#b00', fontSize: 15 }}>
           Couldn't load — will retry on next view.
         </div>
       )}
       {!loading && !error && top.length === 0 && (
-        <div style={{ padding: 16, color: '#888', fontSize: 13 }}>
+        <div style={{ padding: 16, color: '#888', fontSize: 15 }}>
           Nothing yet in this section.
         </div>
       )}

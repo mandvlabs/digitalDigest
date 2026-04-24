@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { auth } from '../services/firebase.js';
 import { ensurePrefsDoc } from '../services/prefs.js';
 
@@ -10,13 +10,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (next) => {
+    const unsub = onAuthStateChanged(auth, async (next) => {
       if (next) {
         await ensurePrefsDoc(next.uid);
+        try {
+          sessionStorage.removeItem('dfd:signing-in');
+        } catch {}
       }
       setUser(next);
-      setLoading(false);
     });
+    getRedirectResult(auth)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    return unsub;
   }, []);
 
   return (

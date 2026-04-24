@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './hooks/useAuth.js';
 import { usePrefs } from './hooks/usePrefs.js';
 import { useMessaging } from './hooks/useMessaging.js';
@@ -47,8 +47,37 @@ function AuthenticatedApp() {
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
+  const [signingIn, setSigningIn] = useState(() => {
+    try {
+      return sessionStorage.getItem('dfd:signing-in') === '1';
+    } catch {
+      return false;
+    }
+  });
 
-  if (authLoading) return <Spinner label="Starting…" />;
+  useEffect(() => {
+    if (user) setSigningIn(false);
+  }, [user]);
+
+  async function handleSignIn() {
+    try {
+      sessionStorage.setItem('dfd:signing-in', '1');
+    } catch {}
+    setSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setSigningIn(false);
+      try {
+        sessionStorage.removeItem('dfd:signing-in');
+      } catch {}
+      throw err;
+    }
+  }
+
+  if (authLoading || (signingIn && !user)) {
+    return <Spinner label={signingIn ? 'Loading your news…' : 'Starting…'} />;
+  }
 
   if (!user) {
     return (
@@ -57,7 +86,7 @@ export default function App() {
         <p style={{ color: '#666' }}>
           Sign in with Google to set up your news feed.
         </p>
-        <button onClick={signInWithGoogle}>Continue with Google</button>
+        <button onClick={handleSignIn}>Continue with Google</button>
       </div>
     );
   }

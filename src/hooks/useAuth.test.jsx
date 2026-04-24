@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 
 const onAuthStateChangedMock = vi.fn();
+const getRedirectResultMock = vi.fn();
 
 vi.mock('../services/firebase.js', () => ({
   auth: { __type: 'mockAuth' },
@@ -9,6 +10,7 @@ vi.mock('../services/firebase.js', () => ({
 
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (...args) => onAuthStateChangedMock(...args),
+  getRedirectResult: (...args) => getRedirectResultMock(...args),
 }));
 
 vi.mock('../services/prefs.js', () => ({
@@ -17,6 +19,7 @@ vi.mock('../services/prefs.js', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getRedirectResultMock.mockResolvedValue(null);
 });
 
 async function renderWithProvider(testId = 'result') {
@@ -39,23 +42,28 @@ async function renderWithProvider(testId = 'result') {
 
 describe('useAuth', () => {
   it('starts in loading state', async () => {
+    // Never-resolving redirect result keeps us in loading
+    getRedirectResultMock.mockReturnValue(new Promise(() => {}));
     onAuthStateChangedMock.mockImplementation(() => () => {});
     await renderWithProvider();
     expect(screen.getByTestId('result').textContent).toBe('loading');
   });
 
-  it('transitions to signed-out when callback fires with null', async () => {
+  it('transitions to signed-out when auth callback fires with null and redirect resolves', async () => {
     let callback;
     onAuthStateChangedMock.mockImplementation((_auth, cb) => {
       callback = cb;
       return () => {};
     });
     await renderWithProvider();
-    await act(async () => callback(null));
+    await act(async () => {
+      callback(null);
+      await Promise.resolve();
+    });
     expect(screen.getByTestId('result').textContent).toBe('anon');
   });
 
-  it('transitions to signed-in when callback fires with a user', async () => {
+  it('transitions to signed-in when auth callback fires with a user and redirect resolves', async () => {
     let callback;
     onAuthStateChangedMock.mockImplementation((_auth, cb) => {
       callback = cb;
@@ -63,8 +71,26 @@ describe('useAuth', () => {
     });
     const { ensurePrefsDoc } = await import('../services/prefs.js');
     await renderWithProvider();
-    await act(async () => callback({ uid: 'u-1' }));
+    await act(async () => {
+      await callback({ uid: 'u-1' });
+      await Promise.resolve();
+    });
     expect(screen.getByTestId('result').textContent).toBe('user:u-1');
     expect(ensurePrefsDoc).toHaveBeenCalledWith('u-1');
+  });
+
+  it('clears the signing-in session flag when user signs in', async () => {
+    sessionStorage.setItem('dfd:signing-in', '1');
+    let callback;
+    onAuthStateChangedMock.mockImplementation((_auth, cb) => {
+      callback = cb;
+      return () => {};
+    });
+    await renderWithProvider();
+    await act(async () => {
+      await callback({ uid: 'u-2' });
+      await Promise.resolve();
+    });
+    expect(sessionStorage.getItem('dfd:signing-in')).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ export default function HomeTab({ onNavigate }) {
   return (
     <section style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
       <header style={{ padding: '16px 16px 8px' }}>
-        <h1 style={{ margin: 0, fontSize: 20 }}>Today's digest</h1>
+        <h1 style={{ margin: 0, fontSize: 22 }}>Today's digest</h1>
       </header>
       <HomeSection
         title="Top from Bulgaria"

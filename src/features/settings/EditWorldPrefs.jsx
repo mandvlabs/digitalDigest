@@ -25,7 +25,7 @@ export default function EditWorldPrefs() {
         World preferences ({topics.size} topics, {regions.size} regions)
       </summary>
       <div style={{ padding: '8px 0' }}>
-        <h4 style={{ margin: '0 0 6px', fontSize: 13 }}>Topics</h4>
+        <h4 style={{ margin: '0 0 6px', fontSize: 15 }}>Topics</h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {WORLD_TOPICS.map((t) => (
             <label key={t.slug} style={{ display: 'flex', gap: 8 }}>
@@ -38,7 +38,7 @@ export default function EditWorldPrefs() {
             </label>
           ))}
         </div>
-        <h4 style={{ margin: '12px 0 6px', fontSize: 13 }}>Regions</h4>
+        <h4 style={{ margin: '12px 0 6px', fontSize: 15 }}>Regions</h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {WORLD_REGIONS.map((r) => (
             <label key={r.slug} style={{ display: 'flex', gap: 8 }}>

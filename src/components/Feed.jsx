@@ -49,7 +49,7 @@ export default function Feed({
         </div>
       )}
       {!hasMore && articles.length > 0 && (
-        <div style={{ padding: 16, textAlign: 'center', color: '#aaa', fontSize: 12 }}>
+        <div style={{ padding: 16, textAlign: 'center', color: '#aaa', fontSize: 14 }}>
           — end —
         </div>
       )}

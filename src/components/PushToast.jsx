@@ -30,13 +30,13 @@ export default function PushToast({ toast, onDismiss }) {
           ×
         </button>
       </div>
-      <div style={{ fontSize: 14 }}>{toast.body}</div>
+      <div style={{ fontSize: 16 }}>{toast.body}</div>
       {toast.url && (
         <a
           href={toast.url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: '#9ecbff', fontSize: 13 }}
+          style={{ color: '#9ecbff', fontSize: 15 }}
         >
           Read →
         </a>
