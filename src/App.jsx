@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth.js';
 import { usePrefs } from './hooks/usePrefs.js';
 import { useMessaging } from './hooks/useMessaging.js';
 import { signInWithGoogle } from './services/auth.js';
+import { registerMessagingSW } from './services/messaging.js';
 import Spinner from './components/Spinner.jsx';
 import AppLayout from './components/AppLayout.jsx';
 import PushToast from './components/PushToast.jsx';
@@ -13,10 +14,27 @@ import WorldTab from './features/world/WorldTab.jsx';
 import SportsTab from './features/sports/SportsTab.jsx';
 import SettingsTab from './features/settings/SettingsTab.jsx';
 
+const VALID_TABS = new Set(['home', 'bulgaria', 'world', 'sports', 'settings']);
+
+function readInitialTab() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && VALID_TABS.has(tab)) {
+      params.delete('tab');
+      const search = params.toString();
+      const next = window.location.pathname + (search ? `?${search}` : '') + window.location.hash;
+      window.history.replaceState({}, '', next);
+      return tab;
+    }
+  } catch {}
+  return 'home';
+}
+
 function AuthenticatedApp() {
   const { prefs, loading: prefsLoading } = usePrefs();
   const { toast, dismiss } = useMessaging();
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(readInitialTab);
   const [rerunOnboarding, setRerunOnboarding] = useState(false);
 
   if (prefsLoading) return <Spinner label="Loading your preferences…" />;
@@ -59,6 +77,10 @@ export default function App() {
     if (user) setSigningIn(false);
   }, [user]);
 
+  useEffect(() => {
+    registerMessagingSW();
+  }, []);
+
   async function handleSignIn() {
     try {
       sessionStorage.setItem('dfd:signing-in', '1');
@@ -76,7 +98,7 @@ export default function App() {
   }
 
   if (authLoading || (signingIn && !user)) {
-    return <Spinner label={signingIn ? 'Loading your news…' : 'Starting…'} />;
+    return <Spinner label="Loading your news…" />;
   }
 
   if (!user) {

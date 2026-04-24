@@ -27,6 +27,20 @@ async function ensureReady() {
   return getMessaging(app);
 }
 
+export async function registerMessagingSW() {
+  if (!('serviceWorker' in navigator)) return null;
+  if (!(await isSupported())) return null;
+  try {
+    const reg = await navigator.serviceWorker.register(buildSwUrl(), { scope: SW_SCOPE });
+    if (reg?.update) {
+      try { await reg.update(); } catch {}
+    }
+    return reg;
+  } catch {
+    return null;
+  }
+}
+
 export async function subscribeToken(uid) {
   const messaging = await ensureReady();
   if (!messaging) return null;
