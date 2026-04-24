@@ -4,6 +4,8 @@ const { pushMatch } = require('./lib/pushMatch');
 
 const COOLDOWN_MS = 30 * 60 * 1000;
 
+const APP_ORIGIN = 'https://daily-family-digest.web.app';
+
 const SECTION_FLAG = {
   bulgaria: 'notifications.bulgariaBreaking',
   world: 'notifications.worldBreaking',
@@ -36,7 +38,7 @@ async function loadPushState(db, uid) {
   return snap?.exists ? (typeof snap.data === 'function' ? snap.data() : snap.data) : {};
 }
 
-async function handleNewsArticle({ data, now }) {
+async function handleNewsArticle({ data, docId, now }) {
   const article = data;
   if (!article || !article.section) return;
   const section = article.section;
@@ -64,13 +66,13 @@ async function handleNewsArticle({ data, now }) {
   const sends = [];
   for (const userDoc of snap.docs) {
     const uid = userDoc.ref.parent.parent.id;
-    sends.push(processUser(db, uid, userDoc.data(), article, now));
+    sends.push(processUser(db, uid, userDoc.data(), article, docId, now));
   }
 
   await Promise.all(sends);
 }
 
-async function processUser(db, uid, prefsData, article, now) {
+async function processUser(db, uid, prefsData, article, docId, now) {
   const pushState = await loadPushState(db, uid);
   const match = pushMatch({
     article,
@@ -83,19 +85,24 @@ async function processUser(db, uid, prefsData, article, now) {
   const messaging = await getMsg();
   const title = article.source || 'DailyDigest';
   const body = article.headline || '';
+  const targetRoute = docId ? `/?article=${docId}` : '/';
   const payload = {
     tokens: match.tokens,
+    notification: { title, body },
     data: {
       section: article.section || '',
+      targetRoute,
+      articleUrl: article.url || '',
     },
     webpush: {
       notification: {
         title,
         body,
         icon: '/icon-192.png',
+        badge: '/icon-192.png',
       },
       fcmOptions: {
-        link: article.url || '/',
+        link: `${APP_ORIGIN}${targetRoute}`,
       },
     },
   };
@@ -139,7 +146,7 @@ async function processUser(db, uid, prefsData, article, now) {
 const onNewsArticle = onDocumentCreated('news/{id}', async (event) => {
   const data = event.data?.data();
   if (!data) return;
-  await handleNewsArticle({ data, now: new Date() });
+  await handleNewsArticle({ data, docId: event.params?.id, now: new Date() });
 });
 
 module.exports = { onNewsArticle, handleNewsArticle };

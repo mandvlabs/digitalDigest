@@ -4,19 +4,46 @@ import PushToast from './PushToast.jsx';
 
 describe('PushToast', () => {
   it('renders nothing when toast is null', () => {
-    const { container } = render(<PushToast toast={null} onDismiss={() => {}} />);
+    const { container } = render(
+      <PushToast toast={null} onDismiss={() => {}} onArticleOpen={() => {}} />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
-  it('shows title, body, link and dismiss button', () => {
+  it('shows title, body, and an in-app Read button when articleId is present', () => {
+    const onArticleOpen = vi.fn();
     render(
       <PushToast
-        toast={{ title: 'BBC', body: 'Breaking headline', url: 'https://example.com' }}
+        toast={{
+          title: 'BBC',
+          body: 'Breaking headline',
+          articleId: 'abc123',
+          url: 'https://example.com',
+        }}
         onDismiss={() => {}}
+        onArticleOpen={onArticleOpen}
       />,
     );
     expect(screen.getByText('BBC')).toBeInTheDocument();
     expect(screen.getByText('Breaking headline')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /read/i });
+    fireEvent.click(button);
+    expect(onArticleOpen).toHaveBeenCalledWith('abc123');
+  });
+
+  it('falls back to external link when no articleId', () => {
+    render(
+      <PushToast
+        toast={{
+          title: 'BBC',
+          body: 'Breaking headline',
+          articleId: null,
+          url: 'https://example.com',
+        }}
+        onDismiss={() => {}}
+        onArticleOpen={() => {}}
+      />,
+    );
     const link = screen.getByRole('link', { name: /read/i });
     expect(link).toHaveAttribute('href', 'https://example.com');
     expect(link).toHaveAttribute('target', '_blank');
@@ -27,8 +54,9 @@ describe('PushToast', () => {
     const onDismiss = vi.fn();
     render(
       <PushToast
-        toast={{ title: 'X', body: 'Y', url: null }}
+        toast={{ title: 'X', body: 'Y', articleId: null, url: null }}
         onDismiss={onDismiss}
+        onArticleOpen={() => {}}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));

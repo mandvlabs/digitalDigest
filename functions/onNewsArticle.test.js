@@ -104,6 +104,7 @@ describe('handleNewsArticle', () => {
         source: 'Dnevnik',
         url: 'https://example.com/a',
       },
+      docId: 'doc-123',
       now: new Date('2026-04-23T12:00:00Z'),
     });
 
@@ -111,9 +112,15 @@ describe('handleNewsArticle', () => {
     const payload = mockSendEachForMulticast.mock.calls[0][0];
     expect(payload.tokens).toEqual(['tok-a', 'tok-b']);
     expect(payload.data.section).toBe('bulgaria');
+    expect(payload.data.targetRoute).toBe('/?article=doc-123');
+    expect(payload.data.articleUrl).toBe('https://example.com/a');
+    expect(payload.notification.title).toBe('Dnevnik');
+    expect(payload.notification.body).toBe('H');
     expect(payload.webpush.notification.title).toBe('Dnevnik');
     expect(payload.webpush.notification.body).toBe('H');
-    expect(payload.webpush.fcmOptions.link).toBe('https://example.com/a');
+    expect(payload.webpush.fcmOptions.link).toBe(
+      'https://daily-family-digest.web.app/?article=doc-123',
+    );
     const stateRef = mockFirestore.doc.mock.results
       .map((r) => r.value)
       .find((r) => r && r.path === 'users/user-1/private/pushState');
@@ -155,6 +162,7 @@ describe('handleNewsArticle', () => {
         source: 'Dnevnik',
         url: 'https://example.com/a',
       },
+      docId: 'doc-123',
       now: new Date('2026-04-23T12:00:00Z'),
     });
 

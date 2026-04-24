@@ -1,5 +1,6 @@
-export default function PushToast({ toast, onDismiss }) {
+export default function PushToast({ toast, onDismiss, onArticleOpen }) {
   if (!toast) return null;
+  const canOpenInApp = Boolean(toast.articleId && onArticleOpen);
   return (
     <div
       role="status"
@@ -30,17 +31,33 @@ export default function PushToast({ toast, onDismiss }) {
           ×
         </button>
       </div>
-      <div style={{ fontSize: 16 }}>{toast.body}</div>
-      {toast.url && (
+      <div style={{ fontSize: 20 }}>{toast.body}</div>
+      {canOpenInApp ? (
+        <button
+          onClick={() => onArticleOpen(toast.articleId)}
+          style={{
+            alignSelf: 'flex-start',
+            background: 'transparent',
+            color: '#9ecbff',
+            border: 0,
+            padding: 0,
+            fontSize: 19,
+            cursor: 'pointer',
+            fontWeight: 600,
+          }}
+        >
+          Read →
+        </button>
+      ) : toast.url ? (
         <a
           href={toast.url}
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: '#9ecbff', fontSize: 15 }}
+          style={{ color: '#9ecbff', fontSize: 19 }}
         >
           Read →
         </a>
-      )}
+      ) : null}
     </div>
   );
 }
