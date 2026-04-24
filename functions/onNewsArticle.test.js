@@ -110,9 +110,10 @@ describe('handleNewsArticle', () => {
     expect(mockSendEachForMulticast).toHaveBeenCalledOnce();
     const payload = mockSendEachForMulticast.mock.calls[0][0];
     expect(payload.tokens).toEqual(['tok-a', 'tok-b']);
-    expect(payload.notification.title).toBe('Dnevnik');
-    expect(payload.notification.body).toBe('H');
-    expect(payload.data.url).toBe('https://example.com/a');
+    expect(payload.data.section).toBe('bulgaria');
+    expect(payload.webpush.notification.title).toBe('Dnevnik');
+    expect(payload.webpush.notification.body).toBe('H');
+    expect(payload.webpush.fcmOptions.link).toBe('https://example.com/a');
     const stateRef = mockFirestore.doc.mock.results
       .map((r) => r.value)
       .find((r) => r && r.path === 'users/user-1/private/pushState');

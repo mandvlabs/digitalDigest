@@ -81,16 +81,22 @@ async function processUser(db, uid, prefsData, article, now) {
   if (!match.shouldPush) return;
 
   const messaging = await getMsg();
+  const title = article.source || 'DailyDigest';
+  const body = article.headline || '';
   const payload = {
     tokens: match.tokens,
-    notification: {
-      title: article.source || 'Daily Family Digest',
-      body: article.headline || '',
-    },
     data: {
-      url: article.url || '/',
-      title: article.source || 'Daily Family Digest',
-      body: article.headline || '',
+      section: article.section || '',
+    },
+    webpush: {
+      notification: {
+        title,
+        body,
+        icon: '/icon-192.png',
+      },
+      fcmOptions: {
+        link: article.url || '/',
+      },
     },
   };
 
