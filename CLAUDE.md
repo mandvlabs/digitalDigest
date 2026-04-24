@@ -7,7 +7,7 @@ Personal news-aggregation PWA. Three sections: **Bulgaria** (Bulgarian-language 
 - **Client:** React 19 + Vite 8, modular file layout under `src/`. Inline styles, no CSS framework.
   Lucide-react for icons.
 - **Auth + data:** Firebase Web SDK v12 — Google-only auth, Firestore for per-user preferences and the shared `news` collection.
-- **Push:** FCM (planned in Plan 4, not wired yet).
+- **Push:** FCM via service worker (`public/firebase-messaging-sw.js`). Foreground messages surface as an in-app toast; background handled by SW with notification click → focus existing tab or open URL.
 - **News ingest:** server-side Cloud Functions pulling RSS every 30 min into Firestore.
 - **Hosting:** Firebase Hosting (PWA at https://daily-family-digest.web.app).
 - **Cloud Functions:** Node 20, v2 API. Live in us-central1.
@@ -21,6 +21,7 @@ Personal news-aggregation PWA. Three sections: **Bulgaria** (Bulgarian-language 
 - Composite indexes: see `firestore.indexes.json`
   - `news (section ASC, publishedAt DESC)` — section-level browse
   - `news (section ASC, tags CONTAINS, publishedAt DESC)` — tag-filtered browse
+- Field overrides (collection group): `private.notifications.{bulgaria,world,sports}Breaking` — single-field COLLECTION_GROUP indexes for `onNewsArticle` fan-out query
 - Rules: per-user private `users/{uid}/**`; read-only `news/*` for any authed user
 
 ## Cloud Functions
@@ -32,9 +33,7 @@ Personal news-aggregation PWA. Three sections: **Bulgaria** (Bulgarian-language 
 | `ingestSportsNews` | Scheduler (every 30 min) | Google News per team (`"<team>" football when:1d`) + F1. Tags: `team:<id>` or `sport:f1` |
 | `cleanupOldNews` | Scheduler (daily) | Deletes `news/*` older than 14 days. Batched (500/batch) |
 | `ingestNewsHttp` | HTTP | Manual backfill trigger for all three ingest fns in parallel. `timeoutSeconds: 540`. Gated by `INGEST_KEY` env var (optional) |
-
-Planned (Plan 4):
-- `onNewsArticle` — Firestore `news/{id}` onCreate, fan-out push to users following that tag with the right notification pref enabled
+| `onNewsArticle` | Firestore `news/{id}` onCreate | Fan-out push to users with matching `notifications.<section>Breaking=true` via `collectionGroup('private')`. Pure `pushMatch` logic (6h freshness, section toggle, 30-min per-section cooldown via `users/{uid}/private/pushState`, content match by tag). Prunes dead tokens on FCM `registration-token-not-registered` / `invalid-registration-token`. |
 
 Secrets / config:
 - `INGEST_KEY` — optional gate for the HTTP trigger, set via `firebase functions:secrets:set`
@@ -48,7 +47,9 @@ Secrets / config:
   - `footballTeams: string[]` — team IDs (`PL-ARS`, `PD-BAR`, etc.)
   - `f1Follow: boolean`
   - `notifications: { bulgariaBreaking, worldBreaking, sportsBreaking }` — booleans, all default `false`
-  - `fcmTokens: string[]` — planned for Plan 4
+  - `fcmTokens: string[]` — device tokens, appended on permission grant
+- `users/{uid}/private/pushState` — per-user push rate-limit state
+  - `lastPushAt: { bulgaria?, world?, sports? }` — serverTimestamps of the last push we sent for each section (30-min cooldown enforced by `pushMatch`)
 - `news/{sha1(url)}` — ingested articles
   - `section: 'bulgaria' | 'world' | 'sports'`
   - `headline, excerpt, url, imageUrl, source`
@@ -76,12 +77,20 @@ Secrets / config:
 - `src/features/{bulgaria,world,sports}/{Bulgaria,World,Sports}Tab.jsx` — feed-backed section tabs
 - `src/features/settings/SettingsTab.jsx` + `Edit{BulgariaOutlets,WorldPrefs,SportsPrefs}.jsx` + `NotificationsSection.jsx`, `ProfileSection.jsx`
 - `src/features/onboarding/OnboardingWizard.jsx` + `{Welcome,Bulgaria,World,Sports,Notifications}Step.jsx`
-- `functions/index.js` — admin SDK init + exports all 5 functions
+- `src/services/messaging.js` — `subscribeToken(uid)` (registers SW, gets FCM token via VAPID, stores in prefs), `onForegroundMessage(cb)`
+- `src/hooks/useMessaging.js` — wires foreground FCM → `{ toast, dismiss }` in `<AuthenticatedApp>`
+- `src/components/PushToast.jsx` — fixed-bottom in-app toast with title/body/Read link
+- `src/utils/standalone.js` — `isStandalone()` + `isIos()` for PWA-install detection
+- `src/features/settings/InstallHint.jsx` — iOS-specific "Add to Home Screen" hint above Notifications in Settings
+- `public/manifest.webmanifest`, `public/icon-{192,512}.png` — PWA manifest + icons
+- `public/firebase-messaging-sw.js` — background FCM service worker (compat SDK, config via URL params, focus-or-open on notificationclick)
 - `functions/ingest{Bulgaria,World,Sports}.js` — scheduled ingest entry points
 - `functions/cleanup.js` — 14-day retention sweep
 - `functions/ingestHttp.js` — manual HTTP trigger (runs all three in parallel via `Promise.allSettled`)
 - `functions/lib/rss.js` — rss-parser wrapper (dynamic ESM import to work around vitest 4 CJS mock limitations)
 - `functions/lib/ingest.js` — `sha1(url)` + `writeArticle(db, article)` dedup helper
+- `functions/lib/pushMatch.js` — pure fan-out logic (freshness, toggle, cooldown, content match); 13 tests
+- `functions/onNewsArticle.js` — Firestore onCreate trigger wrapping `pushMatch` + `sendEachForMulticast` + dead-token pruning
 - `functions/sources/{bulgaria,world,sports}.js` — per-section source config (URL builders)
 
 ## Commands
@@ -104,11 +113,13 @@ Secrets / config:
 - **Deduplication via `sha1(url)`.** `news/{sha1(url)}`; `writeArticle` skips if doc already exists (avoids unnecessary writes on re-ingest).
 - **`publishedAt` may be `null`** when the RSS feed has a missing/invalid pubDate. Sort fallback treats null as 0 (pushes them to the end).
 - **vitest 4 CJS mock interop:** `functions/lib/rss.js` uses `await import('rss-parser')` dynamically instead of top-level `require`, because vitest 4 can't intercept a top-level `require` the way v1 could.
-- **Default `notifications.*` is `false`** — matches real subscription state since we haven't auto-requested permission yet.
+- **Default `notifications.*` is `false`** — matches real subscription state; permission is requested only on the explicit "Enable notifications" action in onboarding or Settings.
+- **FCM background SW config via URL query params** — `firebase-messaging-sw.js` is a static file that can't read Vite env vars directly, so `subscribeToken` registers it with `?apiKey=…&projectId=…&messagingSenderId=…&appId=…` appended. The SW reads those with `new URL(self.location).searchParams`.
+- **Collection-group queries on nested fields need explicit index overrides.** `onNewsArticle` queries `collectionGroup('private').where('notifications.<section>Breaking','==',true)` — see `firestore.indexes.json fieldOverrides`.
 - **No `.env` in git** — `.gitignore` covers it. Firebase web config is exposed to the browser via `VITE_*` (safe, protected by security rules).
 - **Firebase HTTP proxy timeout ~30 s** — but Cloud Function `timeoutSeconds: 540` keeps the work running after the HTTP response drops. `curl` on `ingestNewsHttp` will show `upstream request timeout` even on successful ingest; check function logs to confirm.
 - **`firebase deploy --only functions` needs Blaze plan.** Free tier blocks. Upgrade path was smooth; stays within free quotas at current usage.
-- **iOS web push:** only works if the PWA is installed to home screen (iOS 16.4+). Relevant for Plan 4.
+- **iOS web push:** only works if the PWA is installed to home screen (iOS 16.4+). `InstallHint` shown above the Notifications section in Settings when not already standalone.
 
 ## What's done
 
@@ -144,16 +155,24 @@ Secrets / config:
 - 70/70 tests pass, prod build clean (572 kB)
 - Plan: [docs/superpowers/plans/2026-04-23-plan-3-feeds-home.md](docs/superpowers/plans/2026-04-23-plan-3-feeds-home.md)
 
-## Roadmap
+### Plan 4 — Push + PWA polish (complete)
+- PWA manifest + iOS `apple-mobile-web-app-*` meta tags, 192/512 icons
+- `addFcmToken`/`removeFcmToken` helpers on `prefs.js`
+- `src/services/messaging.js` — `subscribeToken(uid)` + `onForegroundMessage`
+- `public/firebase-messaging-sw.js` — background handler (notification click → focus existing tab or open URL)
+- `useMessaging` hook + `PushToast` component mounted in `AuthenticatedApp`
+- Onboarding NotificationsStep + Settings NotificationsSection wired to `subscribeToken` with permission-state UI
+- `InstallHint` shown when app is not standalone (iOS-specific copy vs generic)
+- `functions/lib/pushMatch.js` — pure match (6h freshness, per-section toggle, 30-min cooldown, content match: outlet / topic AND region / team OR F1-follow)
+- `functions/onNewsArticle.js` — Firestore onCreate trigger fan-out via `collectionGroup('private')`; sends via `sendEachForMulticast`; prunes dead tokens (`registration-token-not-registered` / `invalid-registration-token`); writes `pushState.lastPushAt[section]` on success
+- Firestore field overrides for `notifications.{bulgaria,world,sports}Breaking` collection-group indexes
+- GitHub Actions `.github/workflows/deploy.yml` — tests → build (with VITE_FIREBASE_* secrets) → hosting deploy → functions + rules + indexes deploy on push to `main`
+- 107 client tests + 26 function tests, prod build emits manifest / sw / icons
+- Plan: [docs/superpowers/plans/2026-04-23-plan-4-push-pwa.md](docs/superpowers/plans/2026-04-23-plan-4-push-pwa.md)
 
-### Plan 4 — Push + PWA polish (pending, not yet written)
-- FCM token capture on sign-in, stored in `users/{uid}/private/preferences.fcmTokens`
-- Service worker for background push (`public/firebase-messaging-sw.js`)
-- PWA manifest (`public/manifest.webmanifest`), icons, install prompts
-- `onNewsArticle` Firestore trigger — on-create fan-out push to users following matching tag with the right `notifications.*` toggle
-- Per-user rate limiting (avoid push floods on burst ingests)
-- CI deploy (GitHub Actions → `firebase deploy --only hosting,functions` on main)
-- Offline-ready SW precache for the shell
+**Remaining user action:** Add these secrets to the GitHub repo before the CI workflow can deploy: `FIREBASE_SERVICE_ACCOUNT_DAILY_FAMILY_DIGEST` (service-account JSON), `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FCM_VAPID_KEY`.
+
+## Roadmap
 
 ### Nice-to-haves (no plan yet)
 - Pull-to-refresh gesture (the `refresh` fn is already exposed by `useNews`)
