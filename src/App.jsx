@@ -14,6 +14,7 @@ import WorldTab from './features/world/WorldTab.jsx';
 import SportsTab from './features/sports/SportsTab.jsx';
 import SettingsTab from './features/settings/SettingsTab.jsx';
 import ArticleReader from './features/reader/ArticleReader.jsx';
+import { consumePendingArticle } from './utils/pendingArticle.js';
 
 const VALID_TABS = new Set(['home', 'bulgaria', 'world', 'sports', 'settings']);
 
@@ -89,6 +90,16 @@ function AuthenticatedApp() {
     };
     navigator.serviceWorker.addEventListener('message', handler);
     return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
+  // Deep-link recovery path 4: IndexedDB stash from SW notificationclick.
+  // Only reliable path on iOS cold launch (WebKit Bug 263687 rewrites URL to
+  // start_url, so paths 1/2/3 all lose the article ID).
+  useEffect(() => {
+    (async () => {
+      const id = await consumePendingArticle();
+      if (id) setArticleId(id);
+    })();
   }, []);
 
   if (prefsLoading) return <Spinner label="Loading your preferences…" />;

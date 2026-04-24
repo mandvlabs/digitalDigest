@@ -7,7 +7,7 @@ Personal news-aggregation PWA. Three sections: **Bulgaria** (Bulgarian-language 
 - **Client:** React 19 + Vite 8, modular file layout under `src/`. Inline styles, no CSS framework.
   Lucide-react for icons.
 - **Auth + data:** Firebase Web SDK v12 — Google-only auth, Firestore for per-user preferences and the shared `news` collection.
-- **Push:** FCM via service worker (`public/firebase-messaging-sw.js`). Foreground messages surface as an in-app toast; background handled by SW with notification click → focus existing tab or open URL.
+- **Push:** FCM via service worker (`public/firebase-messaging-sw.js`). Foreground messages surface as an in-app toast (macOS / Android); iOS PWAs always route push through the SW even when focused. Tapping a notification opens an in-app `ArticleReader` interstitial with headline/excerpt + "Open article" (system browser) + "Back" (returns to tabs). The SW has a custom `notificationclick` handler (registered BEFORE `importScripts` so FCM's SDK can't `stopImmediatePropagation` over it); it stashes the article ID in IndexedDB, then tries `WindowClient.navigate()` + `postMessage()` to route the running PWA, falling back to `openWindow()` for cold launch. The client reads the article ID via four redundant recovery paths (URL query, Launch Handler API, SW `postMessage`, **IndexedDB stash**) — the IDB path is the only one that reliably survives iOS WebKit Bug 263687. We do NOT register `onBackgroundMessage` — FCM's native display path handles the notification from the top-level `notification` block; adding a custom handler causes duplicate notifications on iOS.
 - **News ingest:** server-side Cloud Functions pulling RSS every 30 min into Firestore.
 - **Hosting:** Firebase Hosting (PWA at https://daily-family-digest.web.app).
 - **Cloud Functions:** Node 20, v2 API. Live in us-central1.
@@ -33,7 +33,7 @@ Personal news-aggregation PWA. Three sections: **Bulgaria** (Bulgarian-language 
 | `ingestSportsNews` | Scheduler (every 30 min) | Google News per team (`"<team>" football when:1d`) + F1. Tags: `team:<id>` or `sport:f1` |
 | `cleanupOldNews` | Scheduler (daily) | Deletes `news/*` older than 14 days. Batched (500/batch) |
 | `ingestNewsHttp` | HTTP | Manual backfill trigger for all three ingest fns in parallel. `timeoutSeconds: 540`. Gated by `INGEST_KEY` env var (optional) |
-| `onNewsArticle` | Firestore `news/{id}` onCreate | Fan-out push to users with matching `notifications.<section>Breaking=true` via `collectionGroup('private')`. Pure `pushMatch` logic (6h freshness, section toggle, 30-min per-section cooldown via `users/{uid}/private/pushState`, content match by tag). Prunes dead tokens on FCM `registration-token-not-registered` / `invalid-registration-token`. |
+| `onNewsArticle` | Firestore `news/{id}` onCreate | Fan-out push to users with matching `notifications.<section>Breaking=true` via `collectionGroup('private')`. Pure `pushMatch` logic (6h freshness, section toggle, 30-min per-section cooldown via `users/{uid}/private/pushState`, content match by tag). Prunes dead tokens on FCM `registration-token-not-registered` / `invalid-registration-token`. Payload shape: top-level `notification: { title, body }` for FCM's auto-display, `data: { section, targetRoute: '/?article=<docId>', articleUrl }` for our SW's notificationclick handler + reader interstitial, `webpush.fcmOptions.link: '<APP_ORIGIN>/?article=<docId>'` as same-origin fallback. |
 
 Secrets / config:
 - `INGEST_KEY` — optional gate for the HTTP trigger, set via `firebase functions:secrets:set`
@@ -71,7 +71,7 @@ Secrets / config:
 - `src/services/worldConfig.js` — `WORLD_TOPICS`, `WORLD_REGIONS` (slug, name, gl, ceid)
 - `src/services/teams.js` — `LEAGUES`, `TEAMS` (id, leagueId, name)
 - `src/components/Feed.jsx` — shared infinite-scroll feed (IntersectionObserver sentinel)
-- `src/components/ArticleCard.jsx`, `EmptyState.jsx`, `ErrorState.jsx`, `Spinner.jsx`, `TabBar.jsx`, `AppLayout.jsx`
+- `src/components/ArticleCard.jsx` (hides broken images via `onError` so RSS feeds with bad/hotlink-protected image URLs render as clean text-only cards), `EmptyState.jsx`, `ErrorState.jsx`, `Spinner.jsx`, `TabBar.jsx`, `AppLayout.jsx`
 - `src/utils/time.js` — relative time formatter (just now / Nm / Nh / Nd / short date)
 - `src/features/home/HomeTab.jsx` + `HomeSection.jsx` — 3/3/3 digest with per-section "See all →" that swaps active tab
 - `src/features/{bulgaria,world,sports}/{Bulgaria,World,Sports}Tab.jsx` — feed-backed section tabs
@@ -81,16 +81,18 @@ Secrets / config:
 - `src/hooks/useMessaging.js` — wires foreground FCM → `{ toast, dismiss }` in `<AuthenticatedApp>`
 - `src/components/PushToast.jsx` — fixed-bottom in-app toast with title/body/Read link
 - `src/utils/standalone.js` — `isStandalone()` + `isIos()` for PWA-install detection
+- `src/utils/pendingArticle.js` — tiny IDB client that consumes the article ID stashed by the SW's notificationclick handler. Only reliable recovery path on iOS cold launch (WebKit Bug 263687 rewrites the URL to `start_url`, so URL/Launch-Handler/postMessage paths all lose the ID).
+- `src/features/reader/ArticleReader.jsx` — in-app article interstitial (fetches article from Firestore by doc ID, shows headline/source/excerpt/image, "Open article →" to system browser, "← Back" to tab view)
 - `src/features/settings/InstallHint.jsx` — iOS-specific "Add to Home Screen" hint above Notifications in Settings
-- `public/manifest.webmanifest`, `public/icon-{192,512}.png` — PWA manifest + icons
-- `public/firebase-messaging-sw.js` — background FCM service worker (compat SDK, config via URL params, focus-or-open on notificationclick)
+- `public/manifest.webmanifest`, `public/icon-{192,512}.png`, `public/icon-maskable-512.png` — PWA manifest + icons (sunrise-over-headlines design, purple/peach gradient). `short_name` is `DailyDigest`; theme color `#5b1a9e`. Maskable entry in the manifest points at the dedicated maskable PNG with an 80% safe zone.
+- `public/firebase-messaging-sw.js` — FCM SW with custom `notificationclick` handler (registered BEFORE `importScripts`). Handler: extracts article ID from `data.targetRoute` (or `data.FCM_MSG.data.targetRoute` for FCM-auto-displayed notifications), **stashes it in IndexedDB** (`dfd-push.pending[article]`), then tries `client.focus()` + `client.navigate()` + `postMessage` to a running client, falling back to `openWindow` for cold launch. Does NOT register `onBackgroundMessage` (FCM auto-displays from top-level `notification`; a second showNotification would duplicate).
 - `functions/ingest{Bulgaria,World,Sports}.js` — scheduled ingest entry points
 - `functions/cleanup.js` — 14-day retention sweep
 - `functions/ingestHttp.js` — manual HTTP trigger (runs all three in parallel via `Promise.allSettled`)
 - `functions/lib/rss.js` — rss-parser wrapper (dynamic ESM import to work around vitest 4 CJS mock limitations)
 - `functions/lib/ingest.js` — `sha1(url)` + `writeArticle(db, article)` dedup helper
 - `functions/lib/pushMatch.js` — pure fan-out logic (freshness, toggle, cooldown, content match); 13 tests
-- `functions/onNewsArticle.js` — Firestore onCreate trigger wrapping `pushMatch` + `sendEachForMulticast` + dead-token pruning
+- `functions/onNewsArticle.js` — Firestore onCreate trigger wrapping `pushMatch` + `sendEachForMulticast` + dead-token pruning. Payload shape: `{ tokens, data: { section }, webpush: { notification: { title, body, icon }, fcmOptions: { link: article.url } } }` — notification block drives FCM's native display (avoids duplicate push on iOS where a data-only payload + custom `onBackgroundMessage` both tried to show a toast), and `fcmOptions.link` is what FCM opens on tap.
 - `functions/sources/{bulgaria,world,sports}.js` — per-section source config (URL builders)
 
 ## Commands
@@ -120,6 +122,13 @@ Secrets / config:
 - **Firebase HTTP proxy timeout ~30 s** — but Cloud Function `timeoutSeconds: 540` keeps the work running after the HTTP response drops. `curl` on `ingestNewsHttp` will show `upstream request timeout` even on successful ingest; check function logs to confirm.
 - **`firebase deploy --only functions` needs Blaze plan.** Free tier blocks. Upgrade path was smooth; stays within free quotas at current usage.
 - **iOS web push:** only works if the PWA is installed to home screen (iOS 16.4+). `InstallHint` shown above the Notifications section in Settings when not already standalone.
+- **`notificationclick` handler must be registered BEFORE `importScripts` of the Firebase SDK.** FCM's SDK registers its own `notificationclick` handler that calls `event.stopImmediatePropagation()` — any handler registered after `importScripts` is silently skipped. Our SW registers the custom handler first, then imports Firebase.
+- **iOS PWA cold-launch deep-link — WebKit Bug 263687 (worked around).** On iOS standalone PWAs, `clients.openWindow('/?article=<id>')` from an SW `notificationclick` gets its URL rewritten to `start_url` on cold launch, losing the query param. Our workaround: the SW also writes `{ articleId, ts }` to IndexedDB (`dfd-push.pending[article]`) before calling `openWindow`. On mount, the React app reads and clears the IDB entry (<60s freshness window) — this path survives the URL rewrite and is what actually makes cold-launch tap → reader work on iOS. Verified on real iPhone both cold (PWA killed) and warm (PWA in App Switcher).
+- **iOS PWAs do NOT fire foreground `onMessage` for push.** Unlike macOS Safari and Chrome, iOS always routes FCM pushes through the SW (system notification), even when the PWA is open and focused. The in-app `PushToast` component is effectively macOS/Android-only. On iOS the only tap → reader path is notification tap → SW notificationclick → IDB stash / navigate / postMessage.
+- **Cold-start auth flash.** `setLoading(false)` in `AuthContext` MUST fire inside the `onAuthStateChanged` callback, not from `getRedirectResult().finally(...)`. Otherwise `loading=false && user=null` for the ~1s window before the auth listener hydrates a persisted user, causing the sign-in screen to flash before the app lands on Home. Keep the spinner up until auth actually resolves.
+- **Home-screen label is frozen at install time on iOS.** Changing `apple-mobile-web-app-title` in `index.html` does not update the label of already-installed shortcuts — user must Remove from Home Screen and re-Add. Same for icons if the *file path* in the manifest didn't change.
+- **Firebase Hosting CDN caches aggressively.** `firebase deploy --only hosting` usually invalidates the edge, but we've seen `manifest.webmanifest` / icon changes appear to deploy successfully while the CDN still served the prior version for ~10-15 minutes. Verify by checking `curl -sI` `last-modified` against local deploy time, or force a redeploy if mismatched.
+- **CSS must be explicitly imported in `main.jsx`.** `src/index.css` is not picked up by Vite automatically — it has to be `import './index.css'` in the entry. We lost an hour to this when font/button/checkbox size changes weren't appearing on mobile.
 
 ## What's done
 
@@ -171,6 +180,19 @@ Secrets / config:
 - Plan: [docs/superpowers/plans/2026-04-23-plan-4-push-pwa.md](docs/superpowers/plans/2026-04-23-plan-4-push-pwa.md)
 
 **Remaining user action:** Add these secrets to the GitHub repo before the CI workflow can deploy: `FIREBASE_SERVICE_ACCOUNT_DAILY_FAMILY_DIGEST` (service-account JSON), `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FCM_VAPID_KEY`.
+
+### Plan 5 — Push Notification Deep-Linking Fix (complete, verified on iPhone)
+
+- Rewrote `public/firebase-messaging-sw.js` — custom `notificationclick` handler registered BEFORE `importScripts` (so FCM's SDK can't `stopImmediatePropagation` over it). Handler stashes the article ID in IndexedDB (`dfd-push.pending[article]`), then tries `client.focus()` + `client.navigate()` + `postMessage` to a running PWA, falling back to `openWindow` for cold launch. Does NOT register `onBackgroundMessage` — FCM's native display already shows the notification from the top-level `notification` block; a custom handler there caused duplicate notifications on iOS.
+- Changed FCM payload in `functions/onNewsArticle.js` — top-level `notification: { title, body }` for FCM's auto-display, `data: { section, targetRoute: '/?article=<docId>', articleUrl }` for our SW handler and reader interstitial, `webpush.fcmOptions.link` points at the same internal `/?article=<docId>` route (same-origin fallback for browsers where our custom handler doesn't fire).
+- New `src/features/reader/ArticleReader.jsx` — in-app interstitial showing headline, source, excerpt, image + "Open article →" (opens system browser via `target="_blank"`) + "← Back" (returns to tab view)
+- New `src/utils/pendingArticle.js` — tiny IDB consumer the React app calls on mount to recover the article ID stashed by the SW.
+- Deep-link bridge in `src/App.jsx` — **four** redundant recovery paths: (1) URL query param on mount, (2) Launch Handler API for Chromium, (3) `postMessage` from SW for running PWAs, (4) IndexedDB stash read on mount (the only path that reliably survives iOS WebKit Bug 263687 on cold launch).
+- Added `launch_handler: { client_mode: "navigate-existing" }` to `manifest.webmanifest`
+- Updated `useMessaging` + `PushToast` — foreground toast "Read" opens the in-app reader via `onArticleOpen(articleId)` callback (still useful on macOS/Chrome/Android; iOS doesn't fire foreground `onMessage` so the toast path doesn't apply there).
+- Verified on real iPhone: tap notification → reader opens reliably whether PWA is killed (cold launch) OR in App Switcher (warm).
+- Spec: [docs/superpowers/specs/2026-04-24-push-notification-deep-linking.md](docs/superpowers/specs/2026-04-24-push-notification-deep-linking.md)
+- Plan: [docs/superpowers/plans/2026-04-24-plan-5-push-fix.md](docs/superpowers/plans/2026-04-24-plan-5-push-fix.md)
 
 ## Roadmap
 
